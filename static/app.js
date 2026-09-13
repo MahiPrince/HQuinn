@@ -8,8 +8,15 @@ const resultKicker = document.querySelector("#result-kicker");
 const resultTitle = document.querySelector("#result-title");
 const resultMessage = document.querySelector("#result-message");
 const resultDetails = document.querySelector("#result-details");
+const privacyMode = document.querySelector("#privacy-mode");
+const dataBadge = document.querySelector("#data-badge");
+const liveConsentRow = document.querySelector("#live-consent-row");
+const liveConsent = document.querySelector("#live-consent");
 const browserSessionId = localStorage.getItem("hquinn-demo-session") || crypto.randomUUID().replaceAll("-", "");
 localStorage.setItem("hquinn-demo-session", browserSessionId);
+let bridgeOnline = false;
+let bridgeMode = "offline";
+let isSubmitting = false;
 
 function sleep(milliseconds) {
   return new Promise((resolve) => setTimeout(resolve, milliseconds));
@@ -22,10 +29,28 @@ async function jsonFetch(url, options = {}) {
   return body;
 }
 
+function updateSubmitState() {
+  const liveAcknowledged = bridgeMode !== "live" || liveConsent.checked;
+  sendButton.disabled = isSubmitting || !bridgeOnline || !liveAcknowledged;
+}
+
 function setBridgeStatus(online, mode) {
+  bridgeOnline = online;
+  bridgeMode = online ? mode : "offline";
   statusChip.classList.toggle("online", online);
   statusChip.classList.toggle("offline", !online);
   statusChip.innerHTML = `<span class="status-dot"></span>${online ? (mode === "echo" ? "Laptop connected · safe test" : "Local intelligence connected") : "Laptop bridge offline"}`;
+  const isLive = online && mode === "live";
+  liveConsentRow.classList.toggle("hidden", !isLive);
+  privacyMode.textContent = !online ? "Laptop offline" : isLive ? "Live local intelligence" : "Connection-only test";
+  privacyMode.classList.toggle("live", isLive);
+  dataBadge.textContent = isLive ? "Non-confidential test only" : "No private data";
+  helperText.textContent = !online
+    ? "Start the local bridge before submitting."
+    : isLive
+      ? "Acknowledge the live-data boundary to enable this request."
+      : "Connection-only mode returns a transport confirmation without using CMD evidence.";
+  updateSubmitState();
 }
 
 async function refreshHealth() {
@@ -95,9 +120,14 @@ async function waitForJob(jobId) {
 async function runTest() {
   const message = messageInput.value.trim();
   if (!message) return;
-  sendButton.disabled = true;
+  if (!bridgeOnline) return showError(new Error("The laptop bridge is offline."));
+  if (bridgeMode === "live" && !liveConsent.checked) {
+    return showError(new Error("Acknowledge the live-data notice before submitting."));
+  }
+  isSubmitting = true;
+  updateSubmitState();
   messageInput.disabled = true;
-  helperText.textContent = "Submitting the test job…";
+  helperText.textContent = bridgeMode === "live" ? "Sending to the local CMD EFS intelligence…" : "Submitting the connection test…";
   try {
     const created = await jsonFetch("/api/jobs", {
       method: "POST",
@@ -105,24 +135,34 @@ async function runTest() {
       body: JSON.stringify({
         sessionId: browserSessionId,
         message,
-        workspaceState: { demo: true },
+        liveConsent: bridgeMode === "live" && liveConsent.checked,
+        workspaceState: {
+          demo: true,
+          dataClassification: "non-confidential test",
+          privacyAcknowledged: bridgeMode === "live" && liveConsent.checked,
+        },
       }),
     });
     showProgress(created.status);
     const result = await waitForJob(created.jobId);
     showResult(result);
-    helperText.textContent = "Connection verified. The same bridge can now be switched to local Codex mode.";
+    helperText.textContent = bridgeMode === "live"
+      ? "Local intelligence responded. Review the evidence, assumptions, and validation gates."
+      : "Connection verified. The bridge is ready for local intelligence mode.";
+    liveConsent.checked = false;
     await refreshHealth();
   } catch (error) {
     showError(error);
     helperText.textContent = "Check the hosted service and local bridge, then try again.";
   } finally {
-    sendButton.disabled = false;
+    isSubmitting = false;
     messageInput.disabled = false;
+    updateSubmitState();
   }
 }
 
 sendButton.addEventListener("click", runTest);
+liveConsent.addEventListener("change", updateSubmitState);
 refreshHealth();
 setInterval(refreshHealth, 5000);
 

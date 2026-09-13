@@ -65,14 +65,24 @@ button { cursor: pointer; }
 .hero > p:last-child { max-width: 650px; color: var(--muted); font-size: 19px; line-height: 1.55; }
 .eyebrow { margin: 0; color: var(--blue); font-size: 12px; font-weight: 750; letter-spacing: 0.13em; text-transform: uppercase; }
 
-.composer-card, .result-card, .architecture-card, .login-card {
+.composer-card, .result-card, .architecture-card, .login-card, .privacy-card {
   border: 1px solid rgba(255, 255, 255, 0.75);
   background: var(--surface);
   box-shadow: var(--shadow);
   backdrop-filter: blur(18px);
 }
 
-.composer-card, .result-card { padding: clamp(24px, 4vw, 42px); border-radius: 30px; }
+.composer-card, .result-card, .privacy-card { padding: clamp(24px, 4vw, 42px); border-radius: 30px; }
+.privacy-card { margin-bottom: 22px; }
+.privacy-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 24px; }
+.privacy-heading h2 { margin: 7px 0 0; font-size: clamp(22px, 3vw, 32px); letter-spacing: -0.04em; }
+.mode-badge { display: inline-flex; padding: 8px 12px; border-radius: 999px; color: #72521a; background: #fff3d3; white-space: nowrap; font-size: 12px; font-weight: 700; }
+.mode-badge.live { color: #236148; background: #e4f6ed; }
+.privacy-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 26px; }
+.privacy-grid > div { padding: 16px; border: 1px solid var(--line); border-radius: 16px; background: rgba(247, 248, 250, 0.75); }
+.privacy-grid strong { display: block; margin-bottom: 7px; font-size: 13px; }
+.privacy-grid span { color: var(--muted); font-size: 13px; line-height: 1.5; }
+.prototype-warning { margin: 18px 0 0; padding: 12px 14px; border-radius: 13px; color: #73551c; background: #fff5dc; font-size: 12px; line-height: 1.5; }
 .card-heading, .composer-footer { display: flex; align-items: flex-start; justify-content: space-between; gap: 24px; }
 .card-heading h2 { margin: 7px 0 0; font-size: clamp(24px, 3vw, 34px); letter-spacing: -0.045em; }
 .safe-badge, .status-chip { display: inline-flex; align-items: center; white-space: nowrap; border-radius: 999px; font-size: 12px; font-weight: 700; }
@@ -91,6 +101,9 @@ textarea, .login-form input {
 
 textarea { min-height: 142px; padding: 18px; resize: vertical; font-size: 17px; line-height: 1.55; }
 textarea:focus, .login-form input:focus { border-color: rgba(6, 102, 229, 0.45); box-shadow: 0 0 0 4px rgba(6, 102, 229, 0.1); }
+.consent-row { display: flex; align-items: flex-start; gap: 11px; margin-top: 15px; padding: 14px 16px; border: 1px solid rgba(180, 125, 32, 0.22); border-radius: 15px; color: #61491e; background: #fff9e9; font-size: 13px; line-height: 1.5; }
+.consent-row.hidden { display: none; }
+.consent-row input { flex: 0 0 auto; width: 17px; height: 17px; margin: 1px 0 0; accent-color: var(--blue); }
 .composer-footer { align-items: center; margin-top: 18px; }
 .composer-footer p { margin: 0; color: var(--muted); font-size: 13px; }
 
@@ -148,6 +161,8 @@ textarea:focus, .login-form input:focus { border-color: rgba(6, 102, 229, 0.45);
   .app-shell { width: min(100% - 24px, 1040px); padding-top: 52px; }
   .hero h1 { font-size: 46px; }
   .card-heading, .composer-footer { align-items: stretch; flex-direction: column; }
+  .privacy-heading { align-items: stretch; flex-direction: column; }
+  .privacy-grid { grid-template-columns: 1fr; }
   .composer-footer .primary-button { width: 100%; }
   .architecture-card { grid-template-columns: 1fr; }
   .architecture-card .arrow { transform: rotate(90deg); text-align: center; }

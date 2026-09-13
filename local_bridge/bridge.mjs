@@ -76,12 +76,22 @@ function echoResult(message) {
 }
 
 async function liveResult(jobRequest) {
+  const localRequest = {
+    sessionId: String(jobRequest?.sessionId || "").slice(0, 80),
+    message: String(jobRequest?.message || "").slice(0, 8000),
+    workspaceState: jobRequest?.workspaceState && typeof jobRequest.workspaceState === "object"
+      ? jobRequest.workspaceState
+      : {},
+  };
+  if (!localRequest.sessionId || !localRequest.message) {
+    throw new Error("The relay supplied an invalid local-intelligence request.");
+  }
   const health = await fetch(`${localBase}/api/health`, { cache: "no-store" });
   if (!health.ok) throw new Error("The local intelligence service is not available.");
   const response = await fetch(`${localBase}/api/chat`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(jobRequest),
+    body: JSON.stringify(localRequest),
   });
   const body = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(body.error || `Local intelligence returned HTTP ${response.status}.`);

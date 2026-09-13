@@ -199,6 +199,11 @@ def api_health():
                 "mode": relay.bridge_mode if online else "offline",
                 "version": relay.bridge_version if online else None,
             },
+            privacy={
+                "browserSends": ["Current message", "Random browser session ID", "Visible demo workspace state"],
+                "staysLocal": ["CMD EFS source files", "Retrieval indexes", "Codex sign-in credentials"],
+                "retention": "Request removed when claimed; result removed after browser delivery.",
+            },
             error=None if online else "The laptop bridge is offline.",
         )
 
@@ -219,6 +224,13 @@ def create_job():
     message = str(payload.get("message") or "").strip()
     session_id = str(payload.get("sessionId") or "").strip()
     workspace_state = payload.get("workspaceState") or {}
+    with relay.lock:
+        bridge_online = relay.bridge_online()
+        bridge_mode = relay.bridge_mode if bridge_online else "offline"
+    if not bridge_online:
+        return jsonify(error="The laptop bridge is offline. Start it before submitting."), 503
+    if bridge_mode == "live" and payload.get("liveConsent") is not True:
+        return jsonify(error="Acknowledge the live-data notice before submitting."), 400
     if not message or len(message) > 8000:
         return jsonify(error="Enter a message between 1 and 8,000 characters."), 400
     if not session_id or len(session_id) > 80:
@@ -243,6 +255,7 @@ def create_job():
             "sessionId": session_id,
             "workspaceState": workspace_state,
         },
+        "bridge_mode": bridge_mode,
         "result": None,
         "error": None,
     }
@@ -266,6 +279,8 @@ def get_job(job_id):
             "result": job["result"] if job["status"] == "complete" else None,
             "error": job["error"] if job["status"] == "failed" else None,
         }
+        if job["status"] in {"complete", "failed"}:
+            relay.jobs.pop(job_id, None)
     return jsonify(response)
 
 
@@ -289,13 +304,16 @@ def bridge_claim():
         now = time.time()
         for job in relay.jobs.values():
             if job["status"] == "processing" and now - job["updated_at"] > 5 * 60:
-                job["status"] = "queued"
+                job["status"] = "failed"
+                job["error"] = "The laptop claimed this request but did not return a result in time. Submit it again."
             if job["status"] != "queued":
                 continue
             job["status"] = "processing"
             job["updated_at"] = now
             job["attempts"] += 1
-            return jsonify(jobId=job["id"], request=job["request"])
+            request_payload = job["request"]
+            job["request"] = None
+            return jsonify(jobId=job["id"], request=request_payload)
     return "", 204
 
 
