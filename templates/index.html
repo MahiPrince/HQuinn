@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="csrf-token" content="{{ csrf_token }}">
+  <title>HQuinn Relay Demo</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+  <script src="{{ url_for('static', filename='app.js') }}" defer></script>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="/" aria-label="HQuinn home">
+      <span class="brand-mark small" aria-hidden="true">H</span>
+      <span>HQuinn</span>
+    </a>
+    <div class="header-actions">
+      <span id="bridge-status" class="status-chip offline"><span class="status-dot"></span>Checking laptop</span>
+      <form method="post" action="/logout">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <button class="text-button" type="submit">Sign out</button>
+      </form>
+    </div>
+  </header>
+
+  <main class="app-shell">
+    <section class="hero">
+      <p class="eyebrow">Hosted-to-local proof</p>
+      <h1>One small request.<br>One complete round trip.</h1>
+      <p>This page runs on Render. The response must come from the bridge running on your laptop.</p>
+    </section>
+
+    <section class="composer-card" aria-labelledby="composer-title">
+      <div class="card-heading">
+        <div>
+          <p class="eyebrow">Relay test</p>
+          <h2 id="composer-title">Send a harmless test message</h2>
+        </div>
+        <span class="safe-badge">No private data</span>
+      </div>
+      <label class="message-label" for="message">Message</label>
+      <textarea id="message" rows="5" maxlength="8000">Confirm that this request travelled from Render to the connector on my laptop and returned successfully.</textarea>
+      <div class="composer-footer">
+        <p id="helper-text">Start the local bridge in connection-only mode before sending.</p>
+        <button id="send-button" class="primary-button" type="button">Run relay test</button>
+      </div>
+    </section>
+
+    <section id="result-card" class="result-card hidden" aria-live="polite">
+      <div class="result-kicker" id="result-kicker">Waiting</div>
+      <h2 id="result-title">The laptop is processing this request.</h2>
+      <p id="result-message" class="result-message"></p>
+      <div id="result-details" class="result-details"></div>
+    </section>
+
+    <section class="architecture-card">
+      <div><strong>1</strong><span>Browser sends to Render</span></div>
+      <div class="arrow">→</div>
+      <div><strong>2</strong><span>Laptop claims the job</span></div>
+      <div class="arrow">→</div>
+      <div><strong>3</strong><span>Result returns securely</span></div>
+    </section>
+  </main>
+</body>
+</html>
+
