@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="csrf-token" content="{{ csrf_token }}">
+  <title>HQuinn · Local Intelligence</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='relay-test.css') }}">
+  <script src="{{ url_for('static', filename='relay-test.js') }}" defer></script>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="/" aria-label="HQuinn home">
+      <span class="brand-mark small" aria-hidden="true">H</span>
+      <span>HQuinn</span>
+    </a>
+    <div class="header-actions">
+      <span id="bridge-status" class="status-chip offline"><span class="status-dot"></span>Checking laptop</span>
+      <form method="post" action="/logout">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <button class="text-button" type="submit">Sign out</button>
+      </form>
+    </div>
+  </header>
+
+  <main class="app-shell">
+    <section class="hero">
+      <p class="eyebrow">CMD EFS prototype</p>
+      <h1>Hosted conversation.<br>Local intelligence.</h1>
+      <p>The web interface runs on Render. CMD evidence and Codex intelligence stay on the connected laptop.</p>
+    </section>
+
+    <section class="privacy-card" aria-labelledby="privacy-title">
+      <div class="privacy-heading">
+        <div>
+          <p class="eyebrow">Live-data boundary</p>
+          <h2 id="privacy-title">Know what moves—and what does not.</h2>
+        </div>
+        <span id="privacy-mode" class="mode-badge">Checking mode</span>
+      </div>
+      <div class="privacy-grid">
+        <div><strong>Render receives temporarily</strong><span>Your current message, a random browser-session ID, and visible demo workspace state.</span></div>
+        <div><strong>Always remains on the laptop</strong><span>CMD EFS documents, indexes, retrieved evidence packets, and Codex sign-in credentials.</span></div>
+        <div><strong>Immediate relay cleanup</strong><span>The request is removed after laptop claim; the result is removed after browser delivery.</span></div>
+      </div>
+      <p class="prototype-warning">Prototype control: use only non-confidential test scenarios until Thermo Fisher security and IT approve production handling.</p>
+    </section>
+
+    <section class="composer-card" aria-labelledby="composer-title">
+      <div class="card-heading">
+        <div>
+          <p class="eyebrow">Copilot request</p>
+          <h2 id="composer-title">Ask the local CMD EFS intelligence</h2>
+        </div>
+        <span id="data-badge" class="safe-badge">Non-confidential test only</span>
+      </div>
+      <label class="message-label" for="message">Message</label>
+      <textarea id="message" rows="5" maxlength="8000">Without selecting products yet, list the qualifying information needed before building a CMD EFS configuration for a pesticide-residue workflow.</textarea>
+      <label id="live-consent-row" class="consent-row hidden" for="live-consent">
+        <input id="live-consent" type="checkbox">
+        <span>I understand this message will pass temporarily through Render to the connected laptop. I confirm it contains no confidential or customer-identifying information.</span>
+      </label>
+      <div class="composer-footer">
+        <p id="helper-text">Waiting for the laptop bridge status.</p>
+        <button id="send-button" class="primary-button" type="button" disabled>Ask HQuinn</button>
+      </div>
+    </section>
+
+    <section id="result-card" class="result-card hidden" aria-live="polite">
+      <div class="result-kicker" id="result-kicker">Waiting</div>
+      <h2 id="result-title">The laptop is processing this request.</h2>
+      <p id="result-message" class="result-message"></p>
+      <div id="result-details" class="result-details"></div>
+      <details id="result-evidence-drawer" class="evidence-drawer hidden">
+        <summary>Evidence and validation details</summary>
+        <div id="result-evidence" class="result-evidence"></div>
+      </details>
+    </section>
+
+    <section class="architecture-card">
+      <div><strong>1</strong><span>Browser sends the current request</span></div>
+      <div class="arrow">→</div>
+      <div><strong>2</strong><span>Laptop claims the job</span></div>
+      <div class="arrow">→</div>
+      <div><strong>3</strong><span>Evidence-grounded result returns</span></div>
+    </section>
+  </main>
+</body>
+</html>
+

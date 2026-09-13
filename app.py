@@ -135,7 +135,7 @@ def security_headers(response):
     response.headers["X-Frame-Options"] = "DENY"
     response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
     response.headers["Content-Security-Policy"] = (
-        "default-src 'self'; style-src 'self'; script-src 'self'; img-src 'self' data:; "
+        "default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'; img-src 'self' data:; "
         "connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'"
     )
     return response
@@ -184,6 +184,12 @@ def home():
     return render_template("index.html", csrf_token=csrf_token(), username=APP_USERNAME)
 
 
+@app.get("/relay-test")
+@login_required
+def relay_test():
+    return render_template("relay_test.html", csrf_token=csrf_token(), username=APP_USERNAME)
+
+
 @app.get("/api/health")
 @login_required
 def api_health():
@@ -203,6 +209,7 @@ def api_health():
                 "browserSends": ["Current message", "Random browser session ID", "Visible demo workspace state"],
                 "staysLocal": ["CMD EFS source files", "Retrieval indexes", "Codex sign-in credentials"],
                 "retention": "Request removed when claimed; result removed after browser delivery.",
+                "browserRetention": "Visible consultation state remains in the current browser until cleared.",
             },
             error=None if online else "The laptop bridge is offline.",
         )
