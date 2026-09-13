@@ -1482,6 +1482,14 @@ summary:focus-visible {
   line-height: 1.55;
 }
 
+.unknowns-card small {
+  display: block;
+  margin-top: 8px;
+  color: #8b642d;
+  font-size: 9px;
+  line-height: 1.45;
+}
+
 .alternative-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -1496,6 +1504,10 @@ summary:focus-visible {
   border-radius: var(--radius-md);
   background: rgba(255,255,255,.85);
   box-shadow: var(--shadow-sm);
+}
+
+.alternative-card:only-child {
+  grid-column: 1 / -1;
 }
 
 .alternative-card.is-selected {

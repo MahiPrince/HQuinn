@@ -4,6 +4,8 @@ The Flask app runs the full conversational CMD EFS copilot interface on Render. 
 
 The hosted interface supports persistent browser-side chat history, qualifying questions, progressive primary/supporting/tertiary configuration, package candidates, alternatives, validation gates, source evidence, change history, undo, and brief export. Static hosted assets contain no embedded CMD configuration corpus; source files, retrieval indexes, and Codex credentials remain on the laptop.
 
+The copilot treats incomplete customer information as normal. It provides one best-supported working build with clearly labeled assumptions, asks only the highest-impact next question, limits secondary routes to one credible alternative, and suppresses package candidates unless the evidence establishes a strong requirement fit.
+
 ## Render configuration
 
 Create a Python web service from this repository.

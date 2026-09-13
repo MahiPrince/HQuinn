@@ -65,7 +65,7 @@ function createState() {
     selectedTab: "requirements",
     phase: "Discovery",
     version: 0,
-    consultationTitle: "Start with the customer outcome",
+    consultationTitle: "Start with whatever you know",
     requirements: {},
     platform: null,
     packageDecision: null,
@@ -95,13 +95,13 @@ function loadState() {
       ...parsed,
       requirements: parsed.requirements || {},
       configuration: { ...createState().configuration, ...(parsed.configuration || {}) },
-      alternatives: Array.isArray(parsed.alternatives) ? parsed.alternatives : [],
-      validationGates: Array.isArray(parsed.validationGates) ? parsed.validationGates : [],
-      packageCandidates: Array.isArray(parsed.packageCandidates) ? parsed.packageCandidates : [],
+      alternatives: Array.isArray(parsed.alternatives) ? parsed.alternatives.filter((item) => item?.fit !== "weak").slice(0, 1) : [],
+      validationGates: Array.isArray(parsed.validationGates) ? parsed.validationGates.slice(0, 8) : [],
+      packageCandidates: Array.isArray(parsed.packageCandidates) ? parsed.packageCandidates.filter((item) => item?.fit === "strong").slice(0, 1) : [],
       evidence: Array.isArray(parsed.evidence) ? parsed.evidence : [],
-      unknowns: Array.isArray(parsed.unknowns) ? parsed.unknowns : [],
-      conflicts: Array.isArray(parsed.conflicts) ? parsed.conflicts : [],
-      suggestions: Array.isArray(parsed.suggestions) ? parsed.suggestions : [],
+      unknowns: Array.isArray(parsed.unknowns) ? parsed.unknowns.slice(0, 5) : [],
+      conflicts: Array.isArray(parsed.conflicts) ? parsed.conflicts.slice(0, 5) : [],
+      suggestions: Array.isArray(parsed.suggestions) ? parsed.suggestions.slice(0, 2) : [],
       history: Array.isArray(parsed.history) ? parsed.history : [],
       undoStack: Array.isArray(parsed.undoStack) ? parsed.undoStack.slice(-10) : [],
     };
@@ -241,9 +241,9 @@ function renderWelcome() {
   return `<div class="welcome-card">
     <div class="welcome-icon">Q</div>
     <h2>What does the customer need to accomplish?</h2>
-    <p>Start in the customer’s language. I’ll qualify the application, matrix, method, performance, throughput, region, and workflow boundary before proposing a CMD configuration.</p>
+    <p>Start with whatever you know. I’ll build the best-supported starting point, state the assumptions that matter, and refine it with you as more information becomes available.</p>
     <div class="starter-grid">
-      <button class="starter-button" data-prompt="Help me qualify a targeted analysis workflow.">Qualify a targeted analysis workflow</button>
+      <button class="starter-button" data-prompt="Recommend a practical starting build for a targeted analysis workflow, using reasonable evidence-backed assumptions where details are missing.">Start a targeted analysis build</button>
       <button class="starter-button" data-prompt="Help me choose between targeted quantitation and unknown screening.">Compare targeted and unknown screening</button>
       <button class="starter-button" data-prompt="Build an environmental water analysis workflow, starting with qualifying questions.">Build an environmental workflow</button>
       <button class="starter-button" data-prompt="Review an existing list of CMD SKUs and explain the likely use case and gaps.">Review an existing SKU list</button>
@@ -286,13 +286,14 @@ function renderRequirements() {
     ["Throughput", "throughput"], ["Region", "region"], ["Quote boundary", "scope"],
     ["Sample preparation", "samplePrep"], ["UPS", "ups"], ["Nitrogen / gas", "nitrogen"],
   ];
-  const unknowns = [...state.unknowns, ...state.conflicts.map((item) => `Source conflict: ${item}`)];
-  return `<div class="panel-intro"><div><h3>Interpreted requirements</h3><p>Confirmed facts stay separate from assumptions, conflicts, and unknowns.</p></div><button class="action-button" data-action="edit-requirements">Edit</button></div>
+  const refinements = [...state.unknowns, ...state.conflicts.map((item) => `Source conflict: ${item}`)];
+  const visibleRefinements = refinements.slice(0, 3);
+  return `<div class="panel-intro"><div><h3>Working requirements</h3><p>Use what is known now; refine assumptions when better information arrives.</p></div><button class="action-button" data-action="edit-requirements">Edit</button></div>
     <div class="requirement-grid"><ul class="requirement-list">${rows.map(([label, key]) => {
       const confirmed = requirementConfirmed(key);
       return `<li class="requirement-item"><span>${label}</span><strong>${escapeHTML(requirementValue(key))}</strong>${statusChip(confirmed ? "Confirmed" : "Unknown", confirmed ? "confirmed" : "unknown")}</li>`;
     }).join("")}</ul></div>
-    <div class="unknowns-card"><h4>Still needed before quote release</h4><ul>${unknowns.length ? unknowns.map((item) => `<li>${escapeHTML(item)}</li>`).join("") : "<li>Continue the conversation to establish the remaining analytical, workflow, site, regional, and commercial gates.</li>"}</ul></div>`;
+    ${visibleRefinements.length ? `<div class="unknowns-card"><h4>Most useful refinements</h4><ul>${visibleRefinements.map((item) => `<li>${escapeHTML(item)}</li>`).join("")}</ul>${refinements.length > visibleRefinements.length ? `<small>${refinements.length - visibleRefinements.length} additional detail${refinements.length - visibleRefinements.length === 1 ? " is" : "s are"} tracked without blocking the working build.</small>` : ""}</div>` : ""}`;
 }
 
 function buildItem(item) {
@@ -318,7 +319,7 @@ function renderBuild() {
     ["3 · Site, software, service, and tertiary layer", "Items required to install, operate, control, support, or release the solution.", state.configuration.tertiary || []],
   ];
   const hasItems = sections.some(([, , items]) => items.length);
-  if (!hasItems && !state.packageCandidates.length) return `<div class="empty-panel"><div class="empty-icon">Q</div><h3>The build is waiting for qualification</h3><p>Continue the conversation until the intended result, matrix, targets, method, performance, throughput, region, and workflow boundary are sufficient for a supported recommendation.</p></div>`;
+  if (!hasItems && !state.packageCandidates.length) return `<div class="empty-panel"><div class="empty-icon">Q</div><h3>No supported starting configuration yet</h3><p>Keep describing the customer outcome in whatever detail is available. HQuinn will start the build as soon as the evidence supports a credible direction.</p></div>`;
   return `<div class="panel-intro"><div><h3>Progressive configuration</h3><p>Primary, supporting, and tertiary layers remain separate so a requirement change can reopen only the affected decisions.</p></div><button class="action-button" data-action="edit-requirements">Edit requirements</button></div>
     ${state.configuration.approach ? `<section class="approach-card"><div class="approach-copy"><span class="package-symbol">AI</span><div><span class="question-number">Configuration approach</span><strong>${escapeHTML(state.configuration.approach)}</strong></div></div></section>` : ""}
     ${state.packageCandidates.map(packageCard).join("")}
@@ -328,7 +329,7 @@ function renderBuild() {
 function renderAlternatives() {
   const packages = state.packageCandidates.length ? `<div class="panel-intro"><div><h3>Package candidates</h3><p>A close package is a starting signal, never automatic proof of a complete quote.</p></div></div>${state.packageCandidates.map(packageCard).join("")}` : "";
   const alternatives = state.alternatives.length ? `<div class="panel-intro"><div><h3>Compare viable solution branches</h3><p>Fit expresses evidence-backed requirement alignment, not commercial approval.</p></div></div><div class="alternative-grid">${state.alternatives.map((item, index) => `<article class="alternative-card ${index === 0 ? "is-selected" : ""}">${statusChip(item.type || "Alternative", index === 0 ? "candidate" : "external")}<h4>${escapeHTML(item.name)}</h4><p>${escapeHTML(item.rationale)}</p><div class="fit-score">${escapeHTML(item.fit)}<small> requirement fit</small></div>${item.tradeoffs?.length ? `<div class="alternative-detail"><strong>Trade-offs</strong><ul>${item.tradeoffs.map((value) => `<li>${escapeHTML(value)}</li>`).join("")}</ul></div>` : ""}${item.gates?.length ? `<div class="alternative-detail"><strong>Open gates</strong><ul>${item.gates.map((value) => `<li>${escapeHTML(value)}</li>`).join("")}</ul></div>` : ""}<button class="primary-button" data-prompt="Evaluate ${escapeHTML(item.name)} as the preferred route and trace the impact on the entire current configuration.">Evaluate this route</button></article>`).join("")}</div>` : "";
-  return packages || alternatives ? packages + alternatives : `<div class="empty-panel"><div class="empty-icon">↔</div><h3>No supported alternative has been established</h3><p>Ask the copilot to compare approaches after enough qualifying information is available.</p></div>`;
+  return packages || alternatives ? packages + alternatives : `<div class="empty-panel"><div class="empty-icon">↔</div><h3>Focused on the recommended route</h3><p>A second route will appear only when it is a credible alternative with a meaningful customer trade-off.</p></div>`;
 }
 
 function validationItem(gate) {
@@ -356,9 +357,10 @@ function renderHistory() {
 
 function renderWorkspace() {
   const readiness = calculateReadiness();
-  elements.workspaceTitle.textContent = state.mode === "new" ? "No configuration yet" : "Draft configuration";
+  elements.workspaceTitle.textContent = state.mode === "new" ? "Ready to build" : "Working configuration";
   elements.versionPill.textContent = state.version ? `v${state.version}` : "New";
-  elements.readinessStrip.innerHTML = `<div class="readiness-copy"><strong><span>Solution readiness</span><span>${readiness}%</span></strong><div class="progress-track"><div class="progress-fill" style="width:${readiness}%"></div></div></div><span class="readiness-status">${state.mode === "new" ? "Awaiting requirement" : readiness >= 85 ? "Validation needed" : "Qualification in progress"}</span>`;
+  const hasWorkingBuild = (state.configuration.primary || []).length > 0;
+  elements.readinessStrip.innerHTML = `<div class="readiness-copy"><strong><span>Working solution maturity</span><span>${readiness}%</span></strong><div class="progress-track"><div class="progress-fill" style="width:${readiness}%"></div></div></div><span class="readiness-status">${state.mode === "new" ? "Ready for a requirement" : readiness >= 85 ? "Ready for final checks" : hasWorkingBuild ? "Working build available" : "Building the first direction"}</span>`;
   if (state.impact) {
     elements.impactBanner.hidden = false;
     elements.impactBanner.innerHTML = `<strong>Change impact:</strong> ${escapeHTML(state.impact)}<div class="impact-banner-actions"><button data-tab="build">Review affected items</button>${state.undoStack.length ? `<button data-action="undo-change">Undo change</button>` : ""}</div>`;
@@ -372,7 +374,7 @@ function renderWorkspace() {
 }
 
 function renderSuggestions() {
-  elements.suggestionRow.innerHTML = state.suggestions.map((prompt) => `<button class="suggestion-chip" data-prompt="${escapeHTML(prompt)}">${escapeHTML(prompt)}</button>`).join("");
+  elements.suggestionRow.innerHTML = state.suggestions.slice(0, 2).map((prompt) => `<button class="suggestion-chip" data-prompt="${escapeHTML(prompt)}">${escapeHTML(prompt)}</button>`).join("");
 }
 
 function render() {
@@ -495,12 +497,12 @@ function applyCodexResponse(response) {
   if (patch.selectedTab) state.selectedTab = patch.selectedTab;
   state.impact = patch.impact || null;
   if (response.configuration) state.configuration = response.configuration;
-  if (Array.isArray(response.alternatives)) state.alternatives = response.alternatives;
+  if (Array.isArray(response.alternatives)) state.alternatives = response.alternatives.filter((item) => item?.fit !== "weak").slice(0, 1);
   if (Array.isArray(response.validationGates)) state.validationGates = response.validationGates;
-  if (Array.isArray(response.packageCandidates)) state.packageCandidates = response.packageCandidates;
-  if (Array.isArray(response.unknowns)) state.unknowns = response.unknowns;
-  if (Array.isArray(response.conflicts)) state.conflicts = response.conflicts;
-  if (Array.isArray(response.suggestions)) state.suggestions = response.suggestions;
+  if (Array.isArray(response.packageCandidates)) state.packageCandidates = response.packageCandidates.filter((item) => item?.fit === "strong").slice(0, 1);
+  if (Array.isArray(response.unknowns)) state.unknowns = response.unknowns.slice(0, 5);
+  if (Array.isArray(response.conflicts)) state.conflicts = response.conflicts.slice(0, 5);
+  if (Array.isArray(response.suggestions)) state.suggestions = response.suggestions.slice(0, 2);
   if (Array.isArray(response.evidence) && response.evidence.length) {
     state.evidence = [...response.evidence, ...state.evidence].filter((source, index, all) => index === all.findIndex((candidate) => candidate.id === source.id && candidate.path === source.path)).slice(0, 40);
   }
@@ -510,8 +512,6 @@ function applyCodexResponse(response) {
     addHistory(response.changeSummary || "Copilot updated the working solution", patch.impact || "The structured workspace changed after reviewing the requirement and evidence.");
   }
   const paragraphs = [...(response.assistant?.paragraphs || [])];
-  if (state.unknowns.length) paragraphs.push(`Still unknown: ${state.unknowns.slice(0, 4).join(" · ")}${state.unknowns.length > 4 ? ` · ${state.unknowns.length - 4} more in Requirements` : ""}`);
-  if (state.conflicts.length) paragraphs.push(`Evidence conflict: ${state.conflicts.slice(0, 2).join(" · ")}${state.conflicts.length > 2 ? ` · ${state.conflicts.length - 2} more in Requirements` : ""}`);
   state.messages.push({
     type: "assistant",
     title: response.assistant?.title || "I reviewed the controlled CMD EFS evidence.",
