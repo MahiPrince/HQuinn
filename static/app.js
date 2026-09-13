@@ -1,6 +1,7 @@
 const STORE_KEY = "hquinn-hosted-copilot-v1";
 const API_SESSION_KEY = "hquinn-codex-session-v1";
 const LIVE_ACK_KEY = "hquinn-live-data-ack-v1";
+const SIDEBAR_KEY = "hquinn-sidebar-collapsed-v1";
 const CSRF_TOKEN = document.querySelector('meta[name="csrf-token"]')?.content || "";
 
 const elements = {
@@ -28,7 +29,9 @@ const elements = {
   privacyDialog: document.querySelector("#privacyDialog"),
   privacyForm: document.querySelector("#privacyForm"),
   privacyConsent: document.querySelector("#privacyConsent"),
+  appGrid: document.querySelector("#appGrid"),
   sidebar: document.querySelector("#sidebar"),
+  sidebarCollapse: document.querySelector("#sidebarCollapse"),
   toast: document.querySelector("#toast"),
   intelligenceStatus: document.querySelector("#intelligenceStatus"),
 };
@@ -111,6 +114,19 @@ function loadState() {
 }
 
 let state = loadState();
+
+function sidebarStartsCollapsed() {
+  try { return localStorage.getItem(SIDEBAR_KEY) === "yes"; } catch { return false; }
+}
+
+function setSidebarCollapsed(collapsed) {
+  elements.appGrid.classList.toggle("is-sidebar-collapsed", collapsed);
+  elements.sidebarCollapse.setAttribute("aria-label", collapsed ? "Expand configurations" : "Collapse configurations");
+  elements.sidebarCollapse.title = collapsed ? "Expand configurations" : "Collapse configurations";
+  try { localStorage.setItem(SIDEBAR_KEY, collapsed ? "yes" : "no"); } catch { /* The layout still works without persistence. */ }
+}
+
+setSidebarCollapsed(sidebarStartsCollapsed());
 
 function escapeHTML(value) {
   return String(value ?? "")
@@ -618,24 +634,41 @@ function applyRequirements(formData) {
   handleUserMessage(summary);
 }
 
-function exportBrief() {
-  if (state.mode === "new") return showToast("Build a consultation before exporting");
-  const lines = [
-    "# CMD EFS solution brief", "", `Generated: ${new Date().toLocaleString()}`, `Version: v${state.version}`, `Readiness: ${calculateReadiness()}% — not quote-ready`, "",
-    "## Requirements", "", ...Object.entries(state.requirements).map(([key, value]) => `- ${key}: ${value ?? "Not provided"}`), `- sample preparation: ${state.samplePrep}`, `- UPS: ${state.ups}`, "",
-    "## Configuration approach", "", state.configuration.approach || "Not established", "",
-    ...[["Primary analytical system", state.configuration.primary || []], ["Supporting workflow", state.configuration.supporting || []], ["Tertiary, site, software, and service", state.configuration.tertiary || []]].flatMap(([heading, items]) => [`## ${heading}`, "", ...(items.length ? items.map((item) => `- ${item.name}${item.sku ? ` — ${item.sku}` : ""}${item.quantity ? ` — qty ${item.quantity}` : ""} [${item.status}]: ${item.reason}`) : ["- No supported item selected."]), ""]),
-    "## Validation gates", "", ...(state.validationGates.length ? state.validationGates.map((gate) => `- [${gate.status.toUpperCase()}] ${gate.title}: ${gate.detail}`) : ["- Validation has not started."]), "",
-    "## Evidence", "", ...(state.evidence.length ? state.evidence.map((source) => `- ${source.id}: ${source.title} — ${[source.path, source.locator].filter(Boolean).join(" · ")}`) : ["- No controlled evidence cited."]),
-  ];
-  const blob = new Blob([lines.join("\n")], { type: "text/markdown;charset=utf-8" });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = `CMD_EFS_Solution_Brief_v${state.version}.md`;
-  link.click();
-  URL.revokeObjectURL(url);
-  showToast("Solution brief exported");
+function configurationExportPayload() {
+  return {
+    title: state.consultationTitle,
+    version: state.version,
+    phase: state.phase,
+    readiness: calculateReadiness(),
+    platform: state.platform,
+    packageDecision: state.packageDecision,
+    samplePrep: state.samplePrep,
+    ups: state.ups,
+    requirements: state.requirements,
+    configuration: state.configuration,
+    packageCandidates: state.packageCandidates,
+    alternatives: state.alternatives,
+    validationGates: state.validationGates,
+    unknowns: state.unknowns,
+    conflicts: state.conflicts,
+    evidence: state.evidence,
+    messages: state.messages,
+    history: state.history,
+  };
+}
+
+async function exportConfiguration() {
+  if (state.mode === "new") return showToast("Build a configuration before exporting");
+  const button = document.querySelector("#exportButton");
+  button.disabled = true;
+  try {
+    const result = await window.HQuinnExcel.downloadConfigurationWorkbook(configurationExportPayload());
+    showToast(`Excel configuration exported · ${result.itemCount} build items`);
+  } catch (error) {
+    showToast(error.message || "The Excel configuration could not be exported");
+  } finally {
+    button.disabled = false;
+  }
 }
 
 document.addEventListener("click", (event) => {
@@ -694,7 +727,8 @@ document.querySelector("#workspaceSearch").addEventListener("input", (event) => 
   elements.workspaceList.querySelectorAll(".workspace-row").forEach((row) => { row.hidden = Boolean(query && !row.dataset.search.toLowerCase().includes(query)); });
 });
 document.querySelector("#sidebarToggle").addEventListener("click", () => elements.sidebar.classList.toggle("is-open"));
-document.querySelector("#exportButton").addEventListener("click", exportBrief);
+elements.sidebarCollapse.addEventListener("click", () => setSidebarCollapsed(!elements.appGrid.classList.contains("is-sidebar-collapsed")));
+document.querySelector("#exportButton").addEventListener("click", exportConfiguration);
 document.querySelector("#workspaceMore").addEventListener("click", () => selectTab("history"));
 elements.privacyButton.addEventListener("click", () => openPrivacyDialog());
 

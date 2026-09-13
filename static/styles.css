@@ -26,7 +26,7 @@
   --radius-md: 14px;
   --radius-lg: 20px;
   --sidebar-width: 258px;
-  --workspace-width: minmax(430px, 0.92fr);
+  --collapsed-sidebar-width: 64px;
 }
 
 * {
@@ -236,10 +236,23 @@ summary:focus-visible {
 }
 
 .quiet-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
   padding: 7px 12px;
   border-radius: 9px;
   font-size: 12px;
   font-weight: 560;
+}
+
+.export-button svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 .quiet-button:hover,
@@ -293,7 +306,12 @@ summary:focus-visible {
 .app-grid {
   min-height: 0;
   display: grid;
-  grid-template-columns: var(--sidebar-width) minmax(480px, 1.25fr) var(--workspace-width);
+  grid-template-columns: var(--sidebar-width) minmax(400px, 2fr) minmax(520px, 3fr);
+  transition: grid-template-columns 220ms ease;
+}
+
+.app-grid.is-sidebar-collapsed {
+  grid-template-columns: var(--collapsed-sidebar-width) minmax(400px, 2fr) minmax(520px, 3fr);
 }
 
 .sidebar,
@@ -314,6 +332,44 @@ summary:focus-visible {
 
 .sidebar-top {
   padding: 15px 12px 8px;
+}
+
+.sidebar-actions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 34px;
+  gap: 7px;
+}
+
+.sidebar-collapse-button {
+  width: 34px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: rgba(255,255,255,.62);
+  color: var(--ink-soft);
+}
+
+.sidebar-collapse-button:hover {
+  border-color: var(--line-strong);
+  background: #fff;
+  color: var(--ink);
+}
+
+.sidebar-collapse-button svg {
+  width: 17px;
+  height: 17px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.sidebar-collapse-button .expand-icon {
+  display: none;
 }
 
 .new-workspace-button {
@@ -338,6 +394,35 @@ summary:focus-visible {
 .new-workspace-button svg {
   width: 16px;
   height: 16px;
+}
+
+.app-grid.is-sidebar-collapsed .sidebar-top {
+  padding: 15px 10px;
+}
+
+.app-grid.is-sidebar-collapsed .sidebar-actions {
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+
+.app-grid.is-sidebar-collapsed .new-workspace-button,
+.app-grid.is-sidebar-collapsed .sidebar-collapse-button {
+  width: 42px;
+  height: 40px;
+  justify-self: center;
+  padding: 0;
+}
+
+.app-grid.is-sidebar-collapsed .new-workspace-button span,
+.app-grid.is-sidebar-collapsed .search-field,
+.app-grid.is-sidebar-collapsed .workspace-list,
+.app-grid.is-sidebar-collapsed .sidebar-footer,
+.app-grid.is-sidebar-collapsed .sidebar-collapse-button .collapse-icon {
+  display: none;
+}
+
+.app-grid.is-sidebar-collapsed .sidebar-collapse-button .expand-icon {
+  display: block;
 }
 
 .search-field {
@@ -2000,7 +2085,8 @@ summary:focus-visible {
 
 @media (max-width: 1220px) {
   :root { --sidebar-width: 220px; }
-  .app-grid { grid-template-columns: var(--sidebar-width) minmax(420px, 1.15fr) minmax(390px, .9fr); }
+  .app-grid { grid-template-columns: var(--sidebar-width) minmax(360px, 2fr) minmax(450px, 3fr); }
+  .app-grid.is-sidebar-collapsed { grid-template-columns: var(--collapsed-sidebar-width) minmax(360px, 2fr) minmax(450px, 3fr); }
   .phase-step { padding-inline: 7px; }
   .messages { width: calc(100% - 36px); }
   .comparison-message-card { grid-template-columns: 1fr; }
@@ -2010,7 +2096,8 @@ summary:focus-visible {
 @media (max-width: 980px) {
   .mobile-only { display: grid; }
   .brand-mark { display: none; }
-  .app-grid { grid-template-columns: minmax(0, 1fr) minmax(370px, .78fr); }
+  .app-grid,
+  .app-grid.is-sidebar-collapsed { grid-template-columns: minmax(0, 2fr) minmax(370px, 3fr); }
   .sidebar {
     position: fixed;
     top: 58px;
@@ -2022,6 +2109,17 @@ summary:focus-visible {
     transition: transform 220ms ease;
   }
   .sidebar.is-open { transform: translateX(0); }
+  .sidebar-collapse-button { display: none; }
+  .app-grid.is-sidebar-collapsed .sidebar-top { padding: 15px 12px 8px; }
+  .app-grid.is-sidebar-collapsed .sidebar-actions { grid-template-columns: 1fr; }
+  .app-grid.is-sidebar-collapsed .new-workspace-button { width: 100%; height: auto; padding: 10px 12px; }
+  .app-grid.is-sidebar-collapsed .new-workspace-button span,
+  .app-grid.is-sidebar-collapsed .search-field,
+  .app-grid.is-sidebar-collapsed .workspace-list,
+  .app-grid.is-sidebar-collapsed .sidebar-footer { display: block; }
+  .app-grid.is-sidebar-collapsed .new-workspace-button span,
+  .app-grid.is-sidebar-collapsed .search-field { display: flex; }
+  .app-grid.is-sidebar-collapsed .workspace-list { display: block; }
   .environment-pill { display: none; }
 }
 
@@ -2030,6 +2128,8 @@ summary:focus-visible {
   .app-shell { min-height: 100dvh; height: auto; overflow-x: hidden; }
   .topbar { position: sticky; top: 0; }
   .brand-subtitle, .quiet-button { display: none; }
+  .export-button { width: 34px; display: inline-flex; justify-content: center; padding: 7px; }
+  .export-button span { display: none; }
   .app-grid { display: block; }
   .conversation { height: calc(100dvh - 58px); }
   .conversation-header { min-height: 66px; padding: 10px 14px; }

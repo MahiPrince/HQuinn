@@ -32,7 +32,10 @@
         <div class="topbar-actions">
           <span class="environment-pill" id="intelligenceStatus"><span class="pulse-dot"></span> Connecting to laptop…</span>
           <button class="quiet-button" id="privacyButton" type="button">Live data</button>
-          <button class="quiet-button" id="exportButton">Export brief</button>
+          <button class="quiet-button export-button" id="exportButton" type="button">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m0 0 4-4m-4 4-4-4M5 17v3h14v-3" /></svg>
+            <span>Export configuration</span>
+          </button>
           <form method="post" action="/logout" class="logout-form">
             <input type="hidden" name="csrf_token" value="{{ csrf_token }}" />
             <button class="avatar-button" type="submit" aria-label="Sign out of HQuinn" title="Sign out">HQ</button>
@@ -40,13 +43,19 @@
         </div>
       </header>
 
-      <main class="app-grid">
+      <main class="app-grid" id="appGrid">
         <aside class="sidebar" id="sidebar" aria-label="Consultations">
           <div class="sidebar-top">
-            <button class="new-workspace-button" data-action="new-workspace">
-              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>
-              New consultation
-            </button>
+            <div class="sidebar-actions">
+              <button class="new-workspace-button" data-action="new-workspace" aria-label="New Configuration" title="New Configuration">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>
+                <span>New Configuration</span>
+              </button>
+              <button class="sidebar-collapse-button" id="sidebarCollapse" type="button" aria-label="Collapse configurations" title="Collapse configurations">
+                <svg class="collapse-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m14 6-6 6 6 6" /></svg>
+                <svg class="expand-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m10 6 6 6-6 6" /></svg>
+              </button>
+            </div>
 
             <label class="search-field">
               <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5" /><path d="m16 16 4 4" /></svg>
@@ -215,6 +224,8 @@
 
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
+    <script src="{{ url_for('static', filename='vendor/jszip.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='excel-export.js') }}"></script>
     <script src="{{ url_for('static', filename='app.js') }}"></script>
   </body>
 </html>

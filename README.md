@@ -2,7 +2,9 @@
 
 The Flask app runs the full conversational CMD EFS copilot interface on Render. A connector on the laptop claims queued turns over outbound HTTPS, sends them to the existing local Codex intelligence service, and returns the structured response to the same browser conversation.
 
-The hosted interface supports persistent browser-side chat history, qualifying questions, progressive primary/supporting/tertiary configuration, package candidates, alternatives, validation gates, source evidence, change history, undo, and brief export. Static hosted assets contain no embedded CMD configuration corpus; source files, retrieval indexes, and Codex credentials remain on the laptop.
+The hosted interface supports persistent browser-side chat history, qualifying questions, progressive primary/supporting/tertiary configuration, package candidates, alternatives, validation gates, source evidence, change history, undo, and Excel configuration export. Its desktop layout uses a collapsible configuration rail and a 40:60 conversation-to-solution split. Static hosted assets contain no embedded CMD configuration corpus; source files, retrieval indexes, and Codex credentials remain on the laptop.
+
+The Excel export is generated in the browser. Its first worksheet consolidates the full build with available SKUs or part numbers, quantities, statuses, rationale, and sources; Context, Validation, Evidence, and Chat History worksheets retain the supporting record.
 
 The copilot treats incomplete customer information as normal. It provides one best-supported working build with clearly labeled assumptions, asks only the highest-impact next question, limits secondary routes to one credible alternative, and suppresses package candidates unless the evidence establishes a strong requirement fit.
 
