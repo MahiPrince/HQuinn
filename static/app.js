@@ -8,6 +8,8 @@ const resultKicker = document.querySelector("#result-kicker");
 const resultTitle = document.querySelector("#result-title");
 const resultMessage = document.querySelector("#result-message");
 const resultDetails = document.querySelector("#result-details");
+const resultEvidenceDrawer = document.querySelector("#result-evidence-drawer");
+const resultEvidence = document.querySelector("#result-evidence");
 const privacyMode = document.querySelector("#privacy-mode");
 const dataBadge = document.querySelector("#data-badge");
 const liveConsentRow = document.querySelector("#live-consent-row");
@@ -70,6 +72,8 @@ function showProgress(status) {
     ? "The hosted service accepted the request and is waiting for the outbound connector."
     : "The connector claimed the job and is preparing the response.";
   resultDetails.replaceChildren();
+  resultEvidence.replaceChildren();
+  resultEvidenceDrawer.classList.add("hidden");
 }
 
 function detailTile(title, text) {
@@ -83,19 +87,48 @@ function detailTile(title, text) {
   return tile;
 }
 
+function evidenceSection(title, items, formatter) {
+  if (!items.length) return null;
+  const section = document.createElement("section");
+  const heading = document.createElement("h3");
+  heading.textContent = title;
+  const list = document.createElement("ul");
+  items.forEach((item) => {
+    const row = document.createElement("li");
+    row.textContent = formatter(item);
+    list.append(row);
+  });
+  section.append(heading, list);
+  return section;
+}
+
 function showResult(result) {
   const assistant = result?.assistant || {};
+  const paragraphs = Array.isArray(assistant.paragraphs)
+    ? assistant.paragraphs.filter((paragraph) => typeof paragraph === "string" && paragraph.trim())
+    : [];
   resultKicker.textContent = "Round trip complete";
   resultTitle.textContent = assistant.title || "The local connector responded.";
-  resultMessage.textContent = assistant.message || JSON.stringify(result, null, 2);
+  resultMessage.textContent = assistant.message || paragraphs.join("\n\n") || "The local intelligence returned a structured response.";
   const primary = result?.configuration?.primary?.length || 0;
   const supporting = result?.configuration?.supporting?.length || 0;
   const gates = result?.validationGates?.length || 0;
+  const evidence = Array.isArray(result?.evidence) ? result.evidence : [];
+  const unknowns = Array.isArray(result?.unknowns) ? result.unknowns : [];
+  const validationGates = Array.isArray(result?.validationGates) ? result.validationGates : [];
   resultDetails.replaceChildren(
     detailTile("Path", "Render → laptop → Render"),
     detailTile("Mode", result?.demo?.mode || "Local intelligence"),
     detailTile("Structured output", `${primary} primary · ${supporting} supporting · ${gates} validation gates`),
+    detailTile("Evidence confidence", result?.confidence || "Not stated"),
   );
+  const sections = [
+    evidenceSection("Evidence used", evidence, (item) => [item.title, item.path, item.locator].filter(Boolean).join(" · ")),
+    evidenceSection("Still unknown", unknowns, (item) => String(item)),
+    evidenceSection("Validation gates", validationGates, (item) => [item.title, item.detail].filter(Boolean).join(": ")),
+  ].filter(Boolean);
+  resultEvidence.replaceChildren(...sections);
+  resultEvidenceDrawer.classList.toggle("hidden", sections.length === 0);
 }
 
 function showError(error) {
@@ -104,6 +137,8 @@ function showError(error) {
   resultTitle.textContent = "The relay did not complete.";
   resultMessage.textContent = error.message || String(error);
   resultDetails.replaceChildren();
+  resultEvidence.replaceChildren();
+  resultEvidenceDrawer.classList.add("hidden");
 }
 
 async function waitForJob(jobId) {

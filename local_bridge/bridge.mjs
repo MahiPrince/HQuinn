@@ -100,6 +100,12 @@ async function liveResult(jobRequest) {
 
 async function processJob(job) {
   console.log(`Claimed job ${job.jobId.slice(0, 8)} in ${mode} mode.`);
+  const heartbeatTimer = setInterval(() => {
+    request("/bridge/heartbeat", {
+      method: "POST",
+      body: JSON.stringify(bridgeIdentity()),
+    }, 15000).catch(() => {});
+  }, 8000);
   try {
     const result = mode === "echo"
       ? echoResult(job.request.message)
@@ -116,6 +122,8 @@ async function processJob(job) {
       method: "POST",
       body: JSON.stringify({ ok: false, error: message, bridge: bridgeIdentity() }),
     }).catch((reportError) => console.error(`Could not report failure: ${reportError.message}`));
+  } finally {
+    clearInterval(heartbeatTimer);
   }
 }
 

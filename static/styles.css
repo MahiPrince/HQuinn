@@ -135,6 +135,14 @@ textarea:focus, .login-form input:focus { border-color: rgba(6, 102, 229, 0.45);
 .detail-tile { padding: 16px; border: 1px solid var(--line); border-radius: 16px; background: rgba(247, 248, 250, 0.8); }
 .detail-tile strong { display: block; margin-bottom: 5px; font-size: 13px; }
 .detail-tile span { color: var(--muted); font-size: 13px; line-height: 1.45; }
+.evidence-drawer { margin-top: 20px; border-top: 1px solid var(--line); padding-top: 18px; }
+.evidence-drawer.hidden { display: none; }
+.evidence-drawer summary { cursor: pointer; color: var(--ink); font-size: 14px; font-weight: 700; }
+.result-evidence { display: grid; gap: 16px; margin-top: 18px; }
+.result-evidence section { padding: 16px; border: 1px solid var(--line); border-radius: 16px; background: rgba(247, 248, 250, 0.75); }
+.result-evidence h3 { margin: 0 0 9px; font-size: 13px; }
+.result-evidence ul { display: grid; gap: 7px; margin: 0; padding-left: 18px; }
+.result-evidence li { color: var(--muted); font-size: 13px; line-height: 1.5; }
 
 .architecture-card { display: grid; grid-template-columns: 1fr auto 1fr auto 1fr; align-items: center; gap: 18px; margin-top: 22px; padding: 24px; border-radius: 22px; }
 .architecture-card > div:not(.arrow) { display: flex; align-items: center; gap: 12px; }
