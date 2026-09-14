@@ -6,6 +6,7 @@
     ["Primary analytical system", "primary"],
     ["Supporting workflow", "supporting"],
     ["Site, software, service, and tertiary", "tertiary"],
+    ["Optional choices", "optional"],
   ];
 
   function cleanText(value) {
@@ -88,9 +89,14 @@
       item.name || item.title || "Unnamed item",
       item.sku || item.partNumber || item.part_number || item.catalogNumber || "",
       item.quantity ?? item.qty ?? "",
+      item.selected === false ? "No" : "Yes",
+      item.locked ? "Yes" : "No",
+      item.ruleClass || "",
       item.status || "",
       item.role || item.type || item.category || "",
       item.reason || item.rationale || item.description || "",
+      item.applicability || "",
+      Array.isArray(item.conflicts) ? item.conflicts.join(" | ") : "",
       item.sourceId || item.evidenceId || item.source || "",
       item.sourcePath || item.path || item.location || "",
       item.notes || item.note || "",
@@ -101,7 +107,7 @@
     const exportedAt = new Date().toISOString();
     const title = payload.title || "HQuinn configuration";
     const configuration = payload.configuration || {};
-    const buildHeaders = ["Layer", "Item / product name", "SKU / part number", "Quantity", "Status", "Configuration role", "Rationale / requirement fit", "Source ID", "Source location", "Notes"];
+    const buildHeaders = ["Layer", "Item / product name", "SKU / part number", "Quantity", "Selected", "Locked", "CPQ rule class", "Status", "Configuration role", "Rationale / requirement fit", "Applicability", "Item conflicts", "Source ID", "Source location", "Notes"];
     const buildRows = titleRows(
       "HQuinn CMD EFS configuration",
       `${title} | Version ${payload.version || 0} | Exported ${exportedAt} | Preliminary build: validate current CPQ, regional availability, compatibility, service, licensing, and price before quote release.`,
@@ -122,7 +128,13 @@
       ["Sample preparation", payload.samplePrep || "", ""],
       ["UPS", payload.ups || "", ""],
       ["Configuration approach", configuration.approach || "", ""],
+      ["Configuration bundle ID", configuration.bundleId || "", ""],
+      ["Configuration bundle", configuration.bundleName || "", ""],
+      ["Working baseline", configuration.baseline?.summary || "", "Preliminary"],
+      ["Supported capacity statement", configuration.baseline?.capacity || "Not established by controlled evidence", configuration.baseline?.capacity ? "Evidence-backed" : "Not claimed"],
     ];
+    (configuration.baseline?.assumptions || []).forEach((item) => context.push(["Working assumption", item, "Refine when known"]));
+    (configuration.baseline?.upgradeTriggers || []).forEach((item) => context.push(["Upgrade / change trigger", item, "Reconfigure if triggered"]));
     Object.entries(payload.requirements || {}).forEach(([key, value]) => context.push([`Requirement: ${key}`, value ?? "", isMissingValue(value) ? "Not provided" : "Provided"]));
     (payload.packageCandidates || []).forEach((item) => context.push(["Strong package candidate", item.name || item.title || "", item.fit || "strong"]));
     (payload.alternatives || []).forEach((item) => context.push(["Credible alternative", item.name || item.title || "", item.fit || "conditional"]));
@@ -148,7 +160,7 @@
     });
 
     return [
-      { name: "Build", rows: buildRows, widths: [26, 34, 22, 14, 14, 21, 54, 22, 55, 28], mergeTo: buildHeaders.length },
+      { name: "Build", rows: buildRows, widths: [25, 34, 22, 12, 11, 10, 17, 14, 20, 50, 34, 42, 20, 50, 26], mergeTo: buildHeaders.length },
       { name: "Context", rows: contextRows, widths: [31, 74, 20], mergeTo: 3 },
       { name: "Validation", rows: validationRows, widths: [21, 15, 40, 78], mergeTo: 4 },
       { name: "Evidence", rows: evidenceRows, widths: [20, 20, 42, 62, 22, 80], mergeTo: 6 },

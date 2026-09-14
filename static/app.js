@@ -75,7 +75,16 @@ function createState() {
     samplePrep: "unknown",
     ups: "unknown",
     impact: null,
-    configuration: { approach: null, primary: [], supporting: [], tertiary: [] },
+    configuration: {
+      approach: null,
+      bundleId: null,
+      bundleName: null,
+      baseline: { summary: "", capacity: null, assumptions: [], upgradeTriggers: [] },
+      primary: [],
+      supporting: [],
+      tertiary: [],
+      optional: [],
+    },
     alternatives: [],
     validationGates: [],
     packageCandidates: [],
@@ -209,9 +218,9 @@ function addHistory(title, detail) {
 function calculateReadiness() {
   const fields = ["application", "matrix", "method", "throughput", "region", "scope"];
   const requirementPoints = fields.filter((key) => state.requirements[key]).length * 6;
-  const primaryPoints = Math.min(25, (state.configuration.primary || []).length * 7);
-  const supportingPoints = Math.min(12, (state.configuration.supporting || []).length * 4);
-  const tertiaryPoints = Math.min(8, (state.configuration.tertiary || []).length * 2);
+  const primaryPoints = Math.min(25, (state.configuration.primary || []).filter((item) => item.selected !== false).length * 7);
+  const supportingPoints = Math.min(12, (state.configuration.supporting || []).filter((item) => item.selected !== false).length * 4);
+  const tertiaryPoints = Math.min(8, (state.configuration.tertiary || []).filter((item) => item.selected !== false).length * 2);
   const validationPoints = Math.min(10, state.validationGates.filter((gate) => gate.status === "pass").length * 2);
   const approachPoints = state.configuration.approach || state.packageDecision ? 3 : 0;
   return Math.min(94, requirementPoints + primaryPoints + supportingPoints + tertiaryPoints + validationPoints + approachPoints);
@@ -312,11 +321,31 @@ function renderRequirements() {
     ${visibleRefinements.length ? `<div class="unknowns-card"><h4>Most useful refinements</h4><ul>${visibleRefinements.map((item) => `<li>${escapeHTML(item)}</li>`).join("")}</ul>${refinements.length > visibleRefinements.length ? `<small>${refinements.length - visibleRefinements.length} additional detail${refinements.length - visibleRefinements.length === 1 ? " is" : "s are"} tracked without blocking the working build.</small>` : ""}</div>` : ""}`;
 }
 
-function buildItem(item) {
+function ruleClassLabel(item) {
+  return {
+    required: "Required · Q",
+    recommended: item.locked ? "Recommended minimum" : "Recommended · R",
+    optional: "Optional · O",
+    compatible: "Compatible · X",
+    external: "External",
+    unresolved: "Unresolved",
+  }[item.ruleClass] || "Working line";
+}
+
+function buildItem(item, layer) {
   const glyph = String(item.name || "Item").split(/\s+/).map((word) => word[0]).join("").slice(0, 2).toUpperCase();
   const labels = { verified: "Verified", candidate: "Candidate", qualify: "Qualify", unknown: "Unknown", external: "External", missing: "Missing" };
-  const metadata = [item.sku ? `SKU ${item.sku}` : null, item.quantity ? `Qty ${item.quantity}` : null, ...(item.evidence || [])].filter(Boolean);
-  return `<li class="build-item"><div class="build-main"><span class="item-glyph">${escapeHTML(glyph)}</span><span class="item-copy"><strong>${escapeHTML(item.name)}</strong><small>${escapeHTML(item.reason)}</small></span>${statusChip(labels[item.status] || "Qualify", item.status || "qualify")}</div>${metadata.length ? `<div class="item-meta">${metadata.map((value) => `<span class="mini-chip">${escapeHTML(value)}</span>`).join("")}</div>` : ""}</li>`;
+  const metadata = [item.sku ? `SKU ${item.sku}` : null, item.quantity ? `Qty ${item.quantity}` : null, ruleClassLabel(item), item.applicability, ...(item.evidence || [])].filter(Boolean);
+  const canToggle = !item.locked && ["recommended", "optional"].includes(item.ruleClass);
+  const selection = item.locked
+    ? `<span class="locked-selection" title="Required by the active configuration rule">✓</span>`
+    : canToggle
+      ? `<label class="configuration-checkbox"><input type="checkbox" data-action="toggle-config-item" data-layer="${escapeHTML(layer)}" data-item-id="${escapeHTML(item.id)}" ${item.selected ? "checked" : ""}><span></span></label>`
+      : "";
+  const conflicts = (item.conflicts || []).length
+    ? `<div class="item-conflicts">${item.conflicts.map((value) => `<span><strong>Conflict:</strong> ${escapeHTML(value)}</span>`).join("")}</div>`
+    : "";
+  return `<li class="build-item ${item.selected === false ? "is-unselected" : ""}"><div class="build-main">${selection}<span class="item-glyph">${escapeHTML(glyph)}</span><span class="item-copy"><strong>${escapeHTML(item.name)}</strong><small>${escapeHTML(item.reason)}</small></span>${statusChip(labels[item.status] || "Qualify", item.status || "qualify")}</div>${metadata.length ? `<div class="item-meta">${metadata.map((value) => `<span class="mini-chip">${escapeHTML(value)}</span>`).join("")}</div>` : ""}${conflicts}</li>`;
 }
 
 function packageCard(candidate) {
@@ -334,12 +363,24 @@ function renderBuild() {
     ["2 · Supporting workflow", "Preparation, separation, automation, and dependent capabilities.", state.configuration.supporting || []],
     ["3 · Site, software, service, and tertiary layer", "Items required to install, operate, control, support, or release the solution.", state.configuration.tertiary || []],
   ];
-  const hasItems = sections.some(([, , items]) => items.length);
+  const optionals = state.configuration.optional || [];
+  const hasItems = sections.some(([, , items]) => items.length) || optionals.length;
   if (!hasItems && !state.packageCandidates.length) return `<div class="empty-panel"><div class="empty-icon">Q</div><h3>No supported starting configuration yet</h3><p>Keep describing the customer outcome in whatever detail is available. HQuinn will start the build as soon as the evidence supports a credible direction.</p></div>`;
+  const baseline = state.configuration.baseline || {};
+  const baselineDetail = [...(baseline.assumptions || []), ...(baseline.upgradeTriggers || []).map((item) => `Change the build when: ${item}`)];
+  const conflictPanel = state.conflicts.length ? `<section class="configuration-conflicts"><div><strong>Evidence conflicts are still open</strong><p>The provisional result remains visible. Resolve these against the controlling source before quote release.</p></div><ul>${state.conflicts.map((item) => `<li>${escapeHTML(item)}</li>`).join("")}</ul></section>` : "";
+  const optionalSelected = optionals.filter((item) => item.selected).length;
   return `<div class="panel-intro"><div><h3>Progressive configuration</h3><p>Primary, supporting, and tertiary layers remain separate so a requirement change can reopen only the affected decisions.</p></div><button class="action-button" data-action="edit-requirements">Edit requirements</button></div>
     ${state.configuration.approach ? `<section class="approach-card"><div class="approach-copy"><span class="package-symbol">AI</span><div><span class="question-number">Configuration approach</span><strong>${escapeHTML(state.configuration.approach)}</strong></div></div></section>` : ""}
+    ${baseline.summary ? `<section class="baseline-card"><span class="baseline-kicker">Working baseline</span><h4>${escapeHTML(baseline.summary)}</h4>${baseline.capacity ? `<p>${escapeHTML(baseline.capacity)}</p>` : `<p>No numerical capacity is claimed without controlled evidence. Tell me the performance or throughput threshold if this baseline must be resized.</p>`}${baselineDetail.length ? `<details><summary>Assumptions and when to change this build</summary><ul>${baselineDetail.map((item) => `<li>${escapeHTML(item)}</li>`).join("")}</ul></details>` : ""}</section>` : ""}
+    ${conflictPanel}
     ${state.packageCandidates.map(packageCard).join("")}
-    ${sections.map(([title, subtitle, items]) => `<section class="card"><div class="card-header"><div><h4>${title}</h4><small>${subtitle}</small></div><span class="stage-pill ${items.length ? "review" : "pending"}">${items.length ? `${items.length} items` : "Open"}</span></div>${items.length ? `<ul class="build-list">${items.map(buildItem).join("")}</ul>` : `<div class="source-excerpt">No supported item has been selected for this layer yet.</div>`}</section>`).join("")}`;
+    ${sections.map(([title, subtitle, items], index) => {
+      const layer = ["primary", "supporting", "tertiary"][index];
+      const selected = items.filter((item) => item.selected !== false).length;
+      return `<section class="card"><div class="card-header"><div><h4>${title}</h4><small>${subtitle}</small></div><span class="stage-pill ${items.length ? "review" : "pending"}">${items.length ? `${selected}/${items.length} selected` : "Open"}</span></div>${items.length ? `<ul class="build-list">${items.map((item) => buildItem(item, layer)).join("")}</ul>` : `<div class="source-excerpt">No supported item has been selected for this layer yet.</div>`}</section>`;
+    }).join("")}
+    ${optionals.length ? `<section class="card optional-card"><div class="card-header"><div><h4>Optional choices</h4><small>Every applicable O rule from the selected configuration is shown. Check only what the customer wants to proceed with.</small></div><span class="stage-pill review">${optionalSelected}/${optionals.length} selected</span></div><ul class="build-list">${optionals.map((item) => buildItem(item, "optional")).join("")}</ul><div class="optional-actions"><button class="primary-button" data-action="review-optionals">Review selected options and dependencies</button></div></section>` : ""}`;
 }
 
 function renderAlternatives() {
@@ -671,6 +712,27 @@ async function exportConfiguration() {
   }
 }
 
+function toggleConfigurationItem(layer, itemId, selected) {
+  const items = state.configuration?.[layer];
+  if (!Array.isArray(items)) return;
+  const item = items.find((candidate) => candidate.id === itemId);
+  if (!item || item.locked) return;
+  rememberSnapshot();
+  item.selected = Boolean(selected);
+  state.impact = `${item.name} was ${item.selected ? "selected" : "removed from the working selection"}. Dependent quantities and compatibility remain subject to review.`;
+  addHistory(`${item.selected ? "Selected" : "Deselected"} ${item.name}`, state.impact);
+  renderWorkspace();
+  saveState();
+}
+
+function reviewSelectedOptions() {
+  const selected = (state.configuration.optional || []).filter((item) => item.selected);
+  const summary = selected.length
+    ? selected.map((item) => `${item.sku || "No SKU"} — ${item.name}`).join("; ")
+    : "No optional items are selected";
+  handleUserMessage(`Review my optional-item choices: ${summary}. Preserve every checked and unchecked choice, trace dependencies and quantities for selected options, and keep all applicable optional choices visible.`);
+}
+
 document.addEventListener("click", (event) => {
   const promptNode = event.target.closest("[data-prompt]");
   if (promptNode) return handleUserMessage(promptNode.dataset.prompt);
@@ -681,7 +743,9 @@ document.addEventListener("click", (event) => {
   const actionNode = event.target.closest("[data-action]");
   if (!actionNode) return;
   const action = actionNode.dataset.action;
-  if (action === "new-workspace" || action === "reset-demo") startNewConsultation();
+  if (action === "toggle-config-item") toggleConfigurationItem(actionNode.dataset.layer, actionNode.dataset.itemId, actionNode.checked);
+  else if (action === "review-optionals") reviewSelectedOptions();
+  else if (action === "new-workspace" || action === "reset-demo") startNewConsultation();
   else if (action === "edit-requirements") openRequirementsDialog();
   else if (action === "close-dialog") elements.requirementsDialog.close();
   else if (action === "close-privacy") { pendingPrivacyMessage = ""; elements.privacyDialog.close(); }

@@ -36,7 +36,7 @@ app.config.update(
     SESSION_COOKIE_HTTPONLY=True,
     SESSION_COOKIE_SAMESITE="Lax",
     SESSION_COOKIE_SECURE=os.environ.get("COOKIE_SECURE", "1") != "0",
-    MAX_CONTENT_LENGTH=64 * 1024,
+    MAX_CONTENT_LENGTH=256 * 1024,
 )
 
 
@@ -246,7 +246,7 @@ def create_job():
         workspace_text = json.dumps(workspace_state, separators=(",", ":"))
     except (TypeError, ValueError):
         return jsonify(error="The workspace state is invalid."), 400
-    if len(workspace_text) > 20000:
+    if len(workspace_text) > 160000:
         return jsonify(error="The workspace state is too large."), 400
 
     job_id = uuid.uuid4().hex
