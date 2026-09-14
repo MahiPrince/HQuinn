@@ -92,7 +92,10 @@
       item.selected === false ? "No" : "Yes",
       item.locked ? "Yes" : "No",
       item.ruleClass || "",
+      item.ruleBasis || "",
       item.status || "",
+      item.group || "",
+      item.subgroup || "",
       item.role || item.type || item.category || "",
       item.reason || item.rationale || item.description || "",
       item.applicability || "",
@@ -107,7 +110,7 @@
     const exportedAt = new Date().toISOString();
     const title = payload.title || "HQuinn configuration";
     const configuration = payload.configuration || {};
-    const buildHeaders = ["Layer", "Item / product name", "SKU / part number", "Quantity", "Selected", "Locked", "CPQ rule class", "Status", "Configuration role", "Rationale / requirement fit", "Applicability", "Item conflicts", "Source ID", "Source location", "Notes"];
+    const buildHeaders = ["Layer", "Item / product name", "SKU / part number", "Quantity", "Selected", "Locked", "Rule class", "Rule basis", "Status", "System group", "Subgroup", "Configuration role", "Rationale / requirement fit", "Applicability", "Item conflicts", "Source ID", "Source location", "Notes"];
     const buildRows = titleRows(
       "HQuinn CMD EFS configuration",
       `${title} | Version ${payload.version || 0} | Exported ${exportedAt} | Preliminary build: validate current CPQ, regional availability, compatibility, service, licensing, and price before quote release.`,
@@ -130,6 +133,13 @@
       ["Configuration approach", configuration.approach || "", ""],
       ["Configuration bundle ID", configuration.bundleId || "", ""],
       ["Configuration bundle", configuration.bundleName || "", ""],
+      ["Bundle resolution", configuration.bundleResolution || "", ""],
+      ["Line-item expansion", configuration.completeness?.status || "", ""],
+      ["Displayed build lines", configuration.completeness?.displayedLineCount ?? "", ""],
+      ["Controlled CPQ Q/R/O lines", configuration.completeness?.controlledRuleCount ?? "", ""],
+      ["Controlled application/guide lines", configuration.completeness?.applicationLineCount ?? "", ""],
+      ["Unresolved lines", configuration.completeness?.unresolvedCount ?? "", ""],
+      ["Expansion note", configuration.completeness?.note || "", ""],
       ["Working baseline", configuration.baseline?.summary || "", "Preliminary"],
       ["Supported capacity statement", configuration.baseline?.capacity || "Not established by controlled evidence", configuration.baseline?.capacity ? "Evidence-backed" : "Not claimed"],
     ];
@@ -160,7 +170,7 @@
     });
 
     return [
-      { name: "Build", rows: buildRows, widths: [25, 34, 22, 12, 11, 10, 17, 14, 20, 50, 34, 42, 20, 50, 26], mergeTo: buildHeaders.length },
+      { name: "Build", rows: buildRows, widths: [25, 34, 22, 12, 11, 10, 17, 25, 14, 22, 26, 20, 50, 34, 42, 20, 50, 26], mergeTo: buildHeaders.length },
       { name: "Context", rows: contextRows, widths: [31, 74, 20], mergeTo: 3 },
       { name: "Validation", rows: validationRows, widths: [21, 15, 40, 78], mergeTo: 4 },
       { name: "Evidence", rows: evidenceRows, widths: [20, 20, 42, 62, 22, 80], mergeTo: 6 },

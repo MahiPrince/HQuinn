@@ -6,7 +6,7 @@ The hosted interface supports persistent browser-side chat history, qualifying q
 
 The Excel export is generated in the browser. Its first worksheet consolidates the full build with available SKUs or part numbers, quantities, statuses, rationale, and sources; Context, Validation, Evidence, and Chat History worksheets retain the supporting record.
 
-The copilot treats incomplete customer information as normal. It provides one best-supported working build with clearly labeled assumptions, asks only the highest-impact next question, limits secondary routes to one credible alternative, and suppresses package candidates unless the evidence establishes a strong requirement fit.
+The copilot treats incomplete customer information as normal. It provides one best-supported working build with clearly labeled assumptions, asks only the highest-impact next question, limits secondary routes to one strongly matched alternative, and suppresses package candidates unless the evidence establishes a strong requirement fit. The hosted build view expands individual CPQ and controlled application/ordering-guide lines received from the laptop, distinguishes their rule basis, displays compulsory/recommended/optional/unresolved counts, and exports the same detail to Excel.
 
 ## Render configuration
 

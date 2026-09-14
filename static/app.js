@@ -321,11 +321,22 @@ function renderRequirements() {
     ${visibleRefinements.length ? `<div class="unknowns-card"><h4>Most useful refinements</h4><ul>${visibleRefinements.map((item) => `<li>${escapeHTML(item)}</li>`).join("")}</ul>${refinements.length > visibleRefinements.length ? `<small>${refinements.length - visibleRefinements.length} additional detail${refinements.length - visibleRefinements.length === 1 ? " is" : "s are"} tracked without blocking the working build.</small>` : ""}</div>` : ""}`;
 }
 
+function configurationItemsByRule(config, ruleClass) {
+  return [config?.primary, config?.supporting, config?.tertiary, config?.optional]
+    .flatMap((items) => Array.isArray(items) ? items : [])
+    .filter((item) => item?.ruleClass === ruleClass);
+}
+
 function ruleClassLabel(item) {
+  const basis = String(item.ruleBasis || "").toLowerCase();
+  if (item.ruleClass === "required" && basis.includes("application")) return "Compulsory · method";
+  if (item.ruleClass === "required" && basis.includes("regional")) return "Compulsory · region";
+  if (item.ruleClass === "recommended" && basis.includes("ordering-guide")) return "Recommended · guide";
+  if (item.ruleClass === "optional" && basis.includes("ordering-guide")) return "Optional · guide";
   return {
-    required: "Required · Q",
-    recommended: item.locked ? "Recommended minimum" : "Recommended · R",
-    optional: "Optional · O",
+    required: "Compulsory · CPQ Q",
+    recommended: item.locked ? "Recommended minimum" : "Recommended · CPQ R",
+    optional: "Optional · CPQ O",
     compatible: "Compatible · X",
     external: "External",
     unresolved: "Unresolved",
@@ -335,7 +346,7 @@ function ruleClassLabel(item) {
 function buildItem(item, layer) {
   const glyph = String(item.name || "Item").split(/\s+/).map((word) => word[0]).join("").slice(0, 2).toUpperCase();
   const labels = { verified: "Verified", candidate: "Candidate", qualify: "Qualify", unknown: "Unknown", external: "External", missing: "Missing" };
-  const metadata = [item.sku ? `SKU ${item.sku}` : null, item.quantity ? `Qty ${item.quantity}` : null, ruleClassLabel(item), item.applicability, ...(item.evidence || [])].filter(Boolean);
+  const metadata = [item.sku ? `SKU ${item.sku}` : null, item.quantity ? `Qty ${item.quantity}` : null, ruleClassLabel(item), item.group || null, item.subgroup || null, item.applicability, ...(item.evidence || [])].filter(Boolean);
   const canToggle = !item.locked && ["recommended", "optional"].includes(item.ruleClass);
   const selection = item.locked
     ? `<span class="locked-selection" title="Required by the active configuration rule">✓</span>`
@@ -367,12 +378,25 @@ function renderBuild() {
   const hasItems = sections.some(([, , items]) => items.length) || optionals.length;
   if (!hasItems && !state.packageCandidates.length) return `<div class="empty-panel"><div class="empty-icon">Q</div><h3>No supported starting configuration yet</h3><p>Keep describing the customer outcome in whatever detail is available. HQuinn will start the build as soon as the evidence supports a credible direction.</p></div>`;
   const baseline = state.configuration.baseline || {};
+  const completeness = state.configuration.completeness || {};
   const baselineDetail = [...(baseline.assumptions || []), ...(baseline.upgradeTriggers || []).map((item) => `Change the build when: ${item}`)];
   const conflictPanel = state.conflicts.length ? `<section class="configuration-conflicts"><div><strong>Evidence conflicts are still open</strong><p>The provisional result remains visible. Resolve these against the controlling source before quote release.</p></div><ul>${state.conflicts.map((item) => `<li>${escapeHTML(item)}</li>`).join("")}</ul></section>` : "";
   const optionalSelected = optionals.filter((item) => item.selected).length;
+  const totalItems = sections.reduce((count, section) => count + section[2].length, 0) + optionals.length;
+  const completenessPanel = totalItems ? `<section class="configuration-line-summary">
+    <div><span class="baseline-kicker">Line-item expansion</span><strong>${escapeHTML(completeness.status || "Working expansion")}</strong><small>${escapeHTML(completeness.note || "Each displayed row represents one quotation-level item wherever a controlled part number is available.")}</small></div>
+    <div class="configuration-counts">
+      <span><strong>${escapeHTML(completeness.displayedLineCount ?? totalItems)}</strong>Total lines</span>
+      <span><strong>${escapeHTML(completeness.requiredCount ?? configurationItemsByRule(state.configuration, "required").length)}</strong>Compulsory</span>
+      <span><strong>${escapeHTML(completeness.recommendedCount ?? configurationItemsByRule(state.configuration, "recommended").length)}</strong>Recommended</span>
+      <span><strong>${escapeHTML(completeness.optionalCount ?? optionals.length)}</strong>Optional</span>
+      ${completeness.unresolvedCount ? `<span class="has-warning"><strong>${escapeHTML(completeness.unresolvedCount)}</strong>Unresolved</span>` : ""}
+    </div>
+  </section>` : "";
   return `<div class="panel-intro"><div><h3>Progressive configuration</h3><p>Primary, supporting, and tertiary layers remain separate so a requirement change can reopen only the affected decisions.</p></div><button class="action-button" data-action="edit-requirements">Edit requirements</button></div>
     ${state.configuration.approach ? `<section class="approach-card"><div class="approach-copy"><span class="package-symbol">AI</span><div><span class="question-number">Configuration approach</span><strong>${escapeHTML(state.configuration.approach)}</strong></div></div></section>` : ""}
     ${baseline.summary ? `<section class="baseline-card"><span class="baseline-kicker">Working baseline</span><h4>${escapeHTML(baseline.summary)}</h4>${baseline.capacity ? `<p>${escapeHTML(baseline.capacity)}</p>` : `<p>No numerical capacity is claimed without controlled evidence. Tell me the performance or throughput threshold if this baseline must be resized.</p>`}${baselineDetail.length ? `<details><summary>Assumptions and when to change this build</summary><ul>${baselineDetail.map((item) => `<li>${escapeHTML(item)}</li>`).join("")}</ul></details>` : ""}</section>` : ""}
+    ${completenessPanel}
     ${conflictPanel}
     ${state.packageCandidates.map(packageCard).join("")}
     ${sections.map(([title, subtitle, items], index) => {
@@ -380,7 +404,7 @@ function renderBuild() {
       const selected = items.filter((item) => item.selected !== false).length;
       return `<section class="card"><div class="card-header"><div><h4>${title}</h4><small>${subtitle}</small></div><span class="stage-pill ${items.length ? "review" : "pending"}">${items.length ? `${selected}/${items.length} selected` : "Open"}</span></div>${items.length ? `<ul class="build-list">${items.map((item) => buildItem(item, layer)).join("")}</ul>` : `<div class="source-excerpt">No supported item has been selected for this layer yet.</div>`}</section>`;
     }).join("")}
-    ${optionals.length ? `<section class="card optional-card"><div class="card-header"><div><h4>Optional choices</h4><small>Every applicable O rule from the selected configuration is shown. Check only what the customer wants to proceed with.</small></div><span class="stage-pill review">${optionalSelected}/${optionals.length} selected</span></div><ul class="build-list">${optionals.map((item) => buildItem(item, "optional")).join("")}</ul><div class="optional-actions"><button class="primary-button" data-action="review-optionals">Review selected options and dependencies</button></div></section>` : ""}`;
+    <section class="card optional-card"><div class="card-header"><div><h4>Optional choices</h4><small>Every applicable CPQ O row and controlled ordering-guide option is shown. Check only what the customer wants to proceed with.</small></div><span class="stage-pill ${optionals.length ? "review" : "complete"}">${optionals.length ? `${optionalSelected}/${optionals.length} selected` : "None applicable"}</span></div>${optionals.length ? `<ul class="build-list">${optionals.map((item) => buildItem(item, "optional")).join("")}</ul><div class="optional-actions"><button class="primary-button" data-action="review-optionals">Review selected options and dependencies</button></div>` : `<div class="source-excerpt">No applicable optional lines were found in the active CPQ bundle or controlled application configuration.</div>`}</section>`;
 }
 
 function renderAlternatives() {
@@ -554,7 +578,7 @@ function applyCodexResponse(response) {
   if (patch.selectedTab) state.selectedTab = patch.selectedTab;
   state.impact = patch.impact || null;
   if (response.configuration) state.configuration = response.configuration;
-  if (Array.isArray(response.alternatives)) state.alternatives = response.alternatives.filter((item) => item?.fit !== "weak").slice(0, 1);
+  if (Array.isArray(response.alternatives)) state.alternatives = response.alternatives.filter((item) => item?.fit === "strong").slice(0, 1);
   if (Array.isArray(response.validationGates)) state.validationGates = response.validationGates;
   if (Array.isArray(response.packageCandidates)) state.packageCandidates = response.packageCandidates.filter((item) => item?.fit === "strong").slice(0, 1);
   if (Array.isArray(response.unknowns)) state.unknowns = response.unknowns.slice(0, 5);
